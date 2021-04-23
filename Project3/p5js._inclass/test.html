@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Expression with P5js</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.2.0/p5.js"></script>
+
+    <style>
+        html, body{
+                height: 100%;
+        }
+
+        body{
+            margin:0px;
+            display:flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+    </style>
+
+</head>
+<body>
+    <script>
+         let baseURL = "https://api.particle.io/v1/devices/2a003a001747393035313137/";
+        let token = "?access_token=9926134f45f9454d926dd37800e2fd7ee2601e93";
+        let param1 = "pot1";
+        let param2 = "pot2";
+        let data1URL = baseURL + param1 + token; //for potentiometer 1
+        let data2URL = baseURL + param2 + token; //for potentiometer 2
+
+        //TIMER vars:
+        let currentFactor, prevFactor;
+        let timeInterval = 1000;
+        let whichParam = 1;
+        let numberOfParams = 2; //number of sensors you have
+
+        //COLOR vars:
+        //let myHue = 0;
+        //let mySat = 100;
+
+        let xspacing = 8; // Distance between each horizontal location
+        let w; // Width of entire wave
+        let maxwaves = 8; // total # of waves to add together
+
+        let theta = 0.0;
+        let amplitude = new Array(maxwaves); // Height of wave
+        // Value for incrementing X, to be calculated
+        // as a function of period and xspacing
+        let dx = new Array(maxwaves);
+        // Using an array to store height values
+        // for the wave (not entirely necessary)
+        let yvalues;
+
+
+        
+
+        function setup(){
+            createCanvas(710, 400);
+            frameRate(30);
+            colorMode(RGB, 255, 255, 255, 100);
+            w = width + 16;
+
+            for (let i = 0; i < maxwaves; i++) {
+                amplitude[i] = 10;
+                let period = random(100, 300); // Num pixels before wave repeats
+                dx[i] = (TWO_PI / 1) * xspacing;
+            }
+
+            yvalues = new Array(floor(w / xspacing));
+        }
+
+        function draw(){
+            background(0);
+            calcWave();
+            renderWave();
+           // (myHue, mySat, 100);
+
+            currentFactor = millis() % timeInterval;
+            if(currentFactor < prevFactor){ //passed an interval
+                if(whichParam == 1){
+                    loadJSON(data1URL, dataHandle, errorHandle);
+                }
+                else{
+                    loadJSON(data2URL, dataHandle, errorHandle);
+                }
+                whichParam++;
+                if(whichParam == (numberOfParams+1)) whichParam = 1;
+            }
+
+            prevFactor = currentFactor; // prep for the next frame
+        }
+
+        function calcWave() {
+        // Increment theta (try different values
+        // for 'angular velocity' here
+        theta += 0.02;
+
+        // Set all height values to zero
+        for (let i = 0; i < yvalues.length; i++) {
+            yvalues[i] = 0;
+        }
+
+        // Accumulate wave height values
+        for (let j = 0; j < maxwaves; j++) {
+            let x = theta;
+            for (let i = 0; i < yvalues.length; i++) {
+            // Every other wave is cosine instead of sine
+            if (j % 2 == 0) yvalues[i] += sin(x) * amplitude[j];
+            else yvalues[i] += cos(x) * amplitude[j];
+            x += dx[j];
+            }
+        }
+        }
+
+        function renderWave() {
+        // A simple way to draw the wave with an ellipse at each location
+        noStroke();
+        fill(255, 50);
+        ellipseMode(CENTER);
+        for (let x = 0; x < yvalues.length; x++) {
+            ellipse(x * xspacing, width / 2 + yvalues[x], 16, 16);
+        }
+        }
+
+        function dataHandle(JSONdata){
+            console.log(JSONdata);
+            if(JSONdata.name === "pot1"){ 
+                maxwaves = map(parseInt(JSONdata.result), 0, 4096, 1, 10);
+                //amplitude = map(parseInt(JSONdata.result), 0, 4096, 1, 10);
+            }
+            else if(JSONdata.name === "pot2") {
+                yvalues = map(praseInt(JSONdata.result), 0, 4096, 1, 50);
+            }
+        }
+
+        function errorHandle(Error){
+            console.log("Error has occured: " + Error);
+        }
+    </script>
+</body>
+</html>

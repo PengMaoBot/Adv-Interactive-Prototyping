@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto Mono">
+    <link href='http://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="navi">
+            <a href="project1.html">
+                <h5>Project1</h5>
+            </a>
+            <a href="project2.html">
+                <h5>Proejct2</h5>
+            </a>
+            <a href="project3.html">
+                <h5>Proejct3</h5>
+            </a>
+            <a href="project4.html">
+                <h5>Proejct4</h5>
+            </a>
+            <a href="reading.html">
+                <h5>Reading</h5>
+            </a>
+
+        </div>
+        <h1>Project 03 - Data Drawing</h1>
+        
+        <p>
+            For the third project, I decided to use sensors to detect the data when
+                I codeing.
+        </p>
+        <h2>Prototype</h2>
+
+        <p>
+            I decide to use a force sensor and a knock sensor to collect data when I
+            type the keyboard and click the mouse. The knock sensor detects press
+            keyboard. Force sensor will put on my mouse to detect left click.
+        </p>
+        <image src="images/project3-02.jpg" width="100%"></image>
+        <h2>Progress</h2>
+        <p>
+            The tricky part of this project is that particle.io sending data to the
+            browser each 1000ms. But I am not able to press the keyboard exactly at
+            the time of sending data. So for the particle.io part, I need to let it
+            catch the highest data in 1000ms of the knock sensor which means I press
+            the keyboard. Then let it send this data to the browser.
+        </p>
+        <img src="images/project3-01.png" width="100%" /></image>
+        <p>
+            For the data visualization, I use the colorful circle to represent the
+            pressed keyboard and use pink flow to represent mouse press and click. In
+            the end, the canvas will fill up with colorful circles and mouse clicks.
+        </p>
+        <div class="videoWrapper">
+            <iframe
+                src="https://player.vimeo.com/video/532773160?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                width="1280" frameborder="720" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen
+                title="Project3">
+            </iframe>
+        </div>
+    </div>
+</body>
+
+</html>

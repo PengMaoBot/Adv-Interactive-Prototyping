@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project4 - Nano Tank</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.2.0/p5.js"></script>
+    <script src="p5.func.js"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      let baseURL =
+        "https://api.particle.io/v1/devices/2a003a001747393035313137/";
+      let token = "?access_token=d6571b785749ffb8f732675c517f9bef781b6c84";
+      let param1 = "lightSensor";
+      let param2 = "tmpSensor";
+      let param3 = "airButton";
+      let data1URL = baseURL + param1 + token; //for potentiometer 1
+      let data2URL = baseURL + param2 + token; //for potentiometer 2
+      let data3URL = baseURL + param3 + token; //for potentiometer 3
+
+      //TIMER vars:
+      let currentFactor, prevFactor;
+      let timeInterval = 1000;
+      let whichParam = 1;
+      let numberOfParams = 2; //number of sensors you have
+
+      let lightSensor = 0;
+      let tmpSensor = 0;
+      let airButton = 0;
+
+      let e = new p5.Ease();
+      let fish = [];
+
+      let theta = 0.0; // Start angle at 0
+      let amplitude = 10.0; // Height of wave
+
+      let x = 1;
+      let y = 1;
+      let easing = 0.05;
+
+      let a = 0;
+      let b = 0;
+      //let particles = [];
+      //for_wave
+      let start = 0.0;
+      let xoff = 0.0;
+      let inc = 0.0002;
+
+      // Predator
+
+      var xPos = 0; // xPosition of the circle
+      //PredatorArray = [];
+      //colorArray = ["#b04119", "yellow", "blue"];
+
+      // grass
+      let nb = 60;
+      let grasses = [];
+
+      // bubbles
+      let bubbles = [];
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight);
+
+        colorMode(HSB, 360, 100, 100, 1);
+        for (let i = 0; i < 10; i++) {
+          fish[i] = new Fish();
+        }
+        angleMode(DEGREES);
+        // noise
+        pg = createGraphics(width, height);
+        pg.noStroke();
+        for (let i = 0; i < 200000; i++) {
+          let x = random(width);
+          let y = random(height);
+          let n = noise(x * 0.01, y * 0.01) * width * 0.002;
+          let col = color(216, 62, 30, 0.2);
+          //col.setAlpha(90);
+          pg.fill(col);
+          pg.rect(x, y, n, n);
+        }
+        for (let i = 0; i < nb; i++)
+          grasses[i] = new Grass(random(width), height);
+
+        for (let i = 0; i < 1; i++) {
+          bubbles[i] = new Bubble(
+            random(10, 60),
+            random(windowWidth, windowHeight)
+          );
+        }
+      }
+      function draw() {
+        // if (tmpSensor > 80) {
+        //   background(0,52,50); //red
+        // } else {
+        //   background(214,52,50); // blue
+        // }
+        background(tmpSensor, 52, lightSensor);
+        noStroke();
+        //lighting
+        fill(tmpSensor, 32, lightSensor * 1.1);
+        triangle(
+          -100,
+          -100,
+          width - 50,
+          height + 150,
+          width + 200,
+          height - 50
+        );
+
+        image(pg, 0, 0); //texture
+
+        Wave();
+
+        for (let i = 0, len = fish.length; i < len; i++) {
+          fish[i].show();
+          fish[i].update();
+          fish[i].checkEdge();
+        }
+
+        Predator();
+
+        //Food();
+        // grass
+        for (let i = 0; i < grasses.length; i++) {
+          let newCol = color(
+            143,
+            96,
+            lightSensor * grasses[i].brightnessFactor
+          );
+
+          grasses[i].update(newCol);
+          let d = 30 / Math.ceil(abs(mouseX - grasses[i].pos[0].x));
+          grasses[i].setWind((mouseX - pmouseX) * d);
+          grasses[i].display();
+        }
+
+        //bubbles
+        for (let i = 0; i < bubbles.length; i++) {
+          bubbles[i].show();
+          bubbles[i].move();
+        }
+        if(airButton>3000){
+          showBubble();
+        }
+
+        currentFactor = millis() % timeInterval;
+        if (currentFactor < prevFactor) {
+          //passed an interval
+          if (whichParam == 1) {
+            loadJSON(data1URL, dataHandle, errorHandle);
+          } else {
+            loadJSON(data2URL, dataHandle, errorHandle);
+            loadJSON(data3URL, dataHandle, errorHandle);
+          }
+          whichParam++;
+          if (whichParam == numberOfParams + 1) whichParam = 1;
+        }
+
+        prevFactor = currentFactor; // prep for the next frame
+      }
+      function dataHandle(JSONdata) {
+        console.log(JSONdata);
+        if (JSONdata.name === "lightSensor") {
+          lightSensor = map(parseInt(JSONdata.result), 30, 550, 30, 100);
+        } else if (JSONdata.name === "tmpSensor") {
+          tmpSensor = map(parseInt(JSONdata.result), 0, 4096, 206, 0);
+        } else if (JSONdata.name === "airButton") {
+          airButton = map(parseInt(JSONdata.result), 0, 4096, 0, 4096);
+        }
+      }
+
+      function errorHandle(Error) {
+        console.log("Error has occured: " + Error);
+      }
+
+      function Wave() {
+        //wave--------
+        xoff = start;
+        for (let x = 0; x < width; x++) {
+          let y = noise(xoff) * 200;
+          let y2 = noise(xoff + 1) * 300;
+          let y3 = noise(xoff + 10) * 500;
+
+          let wavecol = color(216, 62, 30, 0.3);
+
+          stroke(wavecol);
+          line(x, y, x, height);
+          line(x, y2, x, height);
+          line(x, y3, x, height);
+          xoff += inc;
+          start += inc / 100;
+        }
+      }
+
+      class Fish {
+        constructor() {
+          this.pos = createVector(random(width), random(height));
+          this.muki = 8;
+          this.num = 0;
+          this.t = random(0.0, 0.3);
+          this.vel = 0.001;
+          this.angle = -90;
+        }
+        update() {
+          this.num = this.pos.x * e.variableStaircase(this.t);
+          this.t += this.vel;
+          if (this.num > width) {
+            this.t = this.t * -1;
+          }
+        }
+        show() {
+          noStroke();
+          fill("#b56576");
+          push();
+          let n = 100 * noise(this.t * 2);
+          translate(this.num, this.pos.y + n);
+          rotate(this.angle);
+          rectMode(CENTER);
+          rect(0, 0, 10, 20, 4, 4);
+          ellipse(0, this.muki, 10);
+          //hire-----------
+          push();
+          translate(0, -10);
+          let osci = map(sin(this.t * 10000), 0, 1, -10, -5) / 2;
+          //rotate(osci)
+          triangle(0, 0, 5, osci, -5, osci);
+          pop();
+          //eye--------------
+          fill("#3d5a80");
+          ellipse(0, this.muki, 5);
+          pop();
+        }
+        checkEdge() {
+          if (this.num > width || this.num < 0) {
+            this.pos.x = this.pos.x * -1;
+            this.angle = this.angle * -1;
+          }
+        }
+      }
+
+      function Predator() {
+        theta += 5;
+       
+        // set up the yPosition along a sin wave
+        yPos = 200 +sin(theta) * amplitude;
+
+        // move the x position along
+        xPos += 2;
+
+        // wrap the x position so the
+        //circle stays on the screen.
+        if (xPos >= width) {
+          xPos = 0;
+          
+        }
+
+        // draw the circle
+        fill(235, 134, 252, 200);
+        ellipse(xPos, yPos, 10, 10);
+        ellipse(xPos - 95, yPos - 20, 60, 35);
+        ellipse(xPos - 99, yPos - 2, 80, 40);
+        ellipse(xPos - 95, yPos + 18, 60, 35);
+
+        fill(200, 73, 222, 260);
+        ellipse(xPos, yPos, 200, 80);
+
+        fill(0);
+        ellipse(xPos + 50, yPos - 10, 10, 10);
+
+        fill(235, 134, 252, 200);
+      }
+
+      function Food() {
+        translate(580, 200);
+        noStroke();
+        for (let i = 0; i < 10; i++) {
+          ellipse(0, 3, 2, 8);
+          rotate(PI / 5);
+        }
+      }
+      class Grass {
+        constructor(p_x, p_y) {
+          this.FLOTATION = random(5, 8);
+          this.SEG_DIST = 5;
+          this.maxNbSeg = 60;
+          this.minNbSeg = 25;
+          this.segNum = Math.floor(random(this.minNbSeg, this.maxNbSeg));
+
+          this.rootNoise = createVector(random(123456), random(123456));
+          //this.col = color(random(150,106),random(30,90), random(25,55));
+          this.col = color(random(150, 106), random(30, 90), random(25, 55));
+          this.brightnessFactor = brightness(this.col) / 100;
+          this.wind = createVector(0, 0);
+          this.pos = [];
+          for (let i = 0; i < this.segNum; i++)
+            this.pos[i] = createVector(p_x, p_y - i * this.SEG_DIST);
+        }
+
+        update(updatedColor) {
+          this.rootNoise.add(createVector(0.02, 0.02));
+          //let mouse = createVector(mouseX, mouseY);
+          this.col = updatedColor;
+          updatedColor = 133;
+          for (let i = 1; i < this.pos.length; i++) {
+            //noise
+            let n = noise(
+              this.rootNoise.x + 0.003 * this.pos[i].x,
+              this.rootNoise.y + 0.003 * this.pos[i].y
+            );
+            let noiseForce = (0.3 - n) * i * 0.1;
+            this.pos[i].x += noiseForce;
+
+            //wind
+            let windforce = p5.Vector.mult(
+              this.wind,
+              pow(map(i, 1, this.pos.length, 0, 1), 2)
+            );
+            this.pos[i].add(windforce);
+            this.pos[i].y -= this.FLOTATION;
+
+            //Keep the distance between seg and reflect only the distance
+            let tmp = p5.Vector.sub(this.pos[i], this.pos[i - 1])
+              .normalize()
+              .mult(this.SEG_DIST);
+            this.pos[i] = p5.Vector.add(this.pos[i - 1], tmp);
+          }
+        }
+
+        setWind(vx) {
+          let input = p5.Vector.sub(createVector(vx, 0), this.wind).mult(0.1);
+          this.wind.add(input);
+        }
+
+        display() {
+          for (let i = 0; i < this.pos.length - 1; i++) {
+            noFill();
+            stroke(this.col);
+            strokeWeight(
+              map(i, 0, this.pos.length - 1, this.pos.length / 3, 1)
+            );
+            line(
+              this.pos[i].x,
+              this.pos[i].y,
+              this.pos[i + 1].x,
+              this.pos[i + 1].y
+            );
+          }
+        }
+      }
+
+      //bubble code cont. from top
+      function showBubble() {
+        append(bubbles, new Bubble((random(windowWidth)), random(windowHeight)));
+      }
+
+      class Bubble {
+        constructor(tempx, tempy) {
+          var x;
+          var y;
+
+          this.size = random(6, 18);
+          this.x = tempx;
+          this.y = tempy;
+        }
+
+        move() {
+          this.x += random(-1, 1);
+          this.y += random(-6, -3);
+          if (this.y < 0) {
+            this.y = random(height, height + 30);
+          }
+        }
+
+        show() {
+          stroke(208, 0, 100, 0.3);
+          strokeWeight(1);
+          fill(208, 0, 100, 0.2);
+          circle(this.x, this.y, this.size);
+          noStroke();
+          circle(this.x + 3, this.y - 3, this.size / 6);
+        }
+      }
+    </script>
+  </body>
+</html>
